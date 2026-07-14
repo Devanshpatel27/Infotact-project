@@ -1,22 +1,29 @@
 import os
+
 from ast_parser import ASTParser
+from tracer import ExecutionTracer
 
-def naneer():
+
+def banner():
+
     print("=" * 60)
-    print("  pyChronicle - time Travel Debugger")
+    print("PyChronicle : AST Powered Time Travel Debugger")
     print("=" * 60)
 
-    def main():
 
-        banner()
+def main():
 
-    target_file = "sample.py"
+    banner()
 
-    if not os.path.exists(target_file):
-        print(f"[ERROR] {target_file} not found.")
+    target = "sample.py"
+
+    if not os.path.exists(target):
+
+        print("Target file not found.")
         return
 
-    parser = ASTParser(target_file)
+
+    parser = ASTParser(target)
 
     parser.load_file()
 
@@ -24,7 +31,25 @@ def naneer():
 
     parser.find_assignments()
 
+    print("\n")
+
+   
+
+    tracer = ExecutionTracer()
+
+    tracer.start()
+
+    with open(target, "r", encoding="utf-8") as file:
+
+        code = file.read()
+
+    exec(code, {})
+
+    tracer.stop()
+
+    tracer.show_summary()
+
 
 if __name__ == "__main__":
-    main()    
 
+    main()
