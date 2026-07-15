@@ -1,54 +1,116 @@
-import os
+"""
+============================================================
+PyChronicle
+Main Entry Point
+
+Author : Devansh Patel
+
+Workflow
+
+1. Show Banner
+2. Parse AST
+3. Execute Program
+4. Trace Execution
+5. Display Execution History
+============================================================
+"""
+
+import traceback
+
+from config import (
+    BANNER,
+    TARGET_FILE,
+    LINE
+)
 
 from ast_parser import ASTParser
-from tracer import ExecutionTracer
+from executor import ProgramExecutor
+from ui import ConsoleUI
 
 
-def banner():
+class PyChronicle:
 
-    print("=" * 60)
-    print("PyChronicle : AST Powered Time Travel Debugger")
-    print("=" * 60)
+    def __init__(self):
 
+        self.ui = ConsoleUI()
+
+        self.parser = ASTParser(TARGET_FILE)
+
+        self.executor = ProgramExecutor(TARGET_FILE)
+
+    # ------------------------------------------------------
+
+    def ast_phase(self):
+
+        print(LINE)
+        print("STEP 1 : AST ANALYSIS")
+        print(LINE)
+
+        self.parser.load_file()
+
+        self.parser.parse_ast()
+
+        self.parser.find_assignments()
+
+    # ------------------------------------------------------
+
+    def execution_phase(self):
+
+        print()
+
+        print(LINE)
+        print("STEP 2 : PROGRAM EXECUTION")
+        print(LINE)
+
+        self.executor.execute()
+
+    # ------------------------------------------------------
+
+    def ui_phase(self):
+
+        history = self.executor.get_history()
+
+        self.ui.show_execution(history)
+
+        self.ui.summary(history)
+
+        self.ui.variable_timeline(history)
+
+    # ------------------------------------------------------
+
+    def run(self):
+
+        print(BANNER)
+
+        self.ast_phase()
+
+        self.execution_phase()
+
+        self.ui_phase()
+
+
+# ============================================================
 
 def main():
 
-    banner()
+    try:
 
-    target = "sample.py"
+        app = PyChronicle()
 
-    if not os.path.exists(target):
+        app.run()
 
-        print("Target file not found.")
-        return
+    except KeyboardInterrupt:
+
+        print("\nProgram Interrupted.")
+
+    except Exception:
+
+        print("\nApplication Error\n")
+
+        traceback.print_exc()
 
 
-    parser = ASTParser(target)
-
-    parser.load_file()
-
-    parser.parse_ast()
-
-    parser.find_assignments()
-
-    print("\n")
-
-   
-
-    tracer = ExecutionTracer()
-
-    tracer.start()
-
-    with open(target, "r", encoding="utf-8") as file:
-
-        code = file.read()
-
-    exec(code, {})
-
-    tracer.stop()
-
-    tracer.show_summary()
-
+# ============================================================
 
 if __name__ == "__main__":
 
