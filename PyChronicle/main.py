@@ -1,20 +1,3 @@
-"""
-============================================================
-PyChronicle
-Main Entry Point
-
-Author : Devansh Patel
-
-Workflow
-
-1. Show Banner
-2. Parse AST
-3. Execute Program
-4. Trace Execution
-5. Display Execution History
-============================================================
-"""
-
 import traceback
 
 from config import (
@@ -38,7 +21,6 @@ class PyChronicle:
 
         self.executor = ProgramExecutor(TARGET_FILE)
 
-    # ------------------------------------------------------
 
     def ast_phase(self):
 
@@ -52,7 +34,6 @@ class PyChronicle:
 
         self.parser.find_assignments()
 
-    # ------------------------------------------------------
 
     def execution_phase(self):
 
@@ -64,7 +45,6 @@ class PyChronicle:
 
         self.executor.execute()
 
-    # ------------------------------------------------------
 
     def ui_phase(self):
 
@@ -75,8 +55,6 @@ class PyChronicle:
         self.ui.summary(history)
 
         self.ui.variable_timeline(history)
-
-    # ------------------------------------------------------
 
     def run(self):
 
@@ -89,7 +67,6 @@ class PyChronicle:
         self.ui_phase()
 
 
-# ============================================================
 
 def main():
 
@@ -110,7 +87,6 @@ def main():
         traceback.print_exc()
 
 
-# ============================================================
 
 if __name__ == "__main__":
 
