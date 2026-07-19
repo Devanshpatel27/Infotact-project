@@ -1,7 +1,5 @@
 import os
 
-# ==========================================================
-
 PROJECT_NAME = "PyChronicle"
 
 VERSION = "1.0.0"
