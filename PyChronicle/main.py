@@ -1,93 +1,57 @@
+import argparse
 import traceback
 
-from config import (
-    BANNER,
-    TARGET_FILE,
-    LINE
-)
-
 from ast_parser import ASTParser
-from executor import ProgramExecutor
-from ui import ConsoleUI
+from config import BANNER, DATABASE_PATH, LINE, TARGET_FILE
+from database import DatabaseManager
+
+
+def section(title):
+    print(f"{LINE}\n{title}\n{LINE}")
 
 
 class PyChronicle:
-
-    def __init__(self):
-
-        self.ui = ConsoleUI()
-
-        self.parser = ASTParser(TARGET_FILE)
-
-        self.executor = ProgramExecutor(TARGET_FILE)
-
+    def __init__(self, target_file=TARGET_FILE):
+        self.parser = ASTParser(target_file)
+        self.database = DatabaseManager(DATABASE_PATH)
 
     def ast_phase(self):
-
-        print(LINE)
-        print("STEP 1 : AST ANALYSIS")
-        print(LINE)
-
+        section("STEP 1 : AST ANALYSIS")
         self.parser.load_file()
-
         self.parser.parse_ast()
+        return self.parser.find_assignments()
 
-        self.parser.find_assignments()
-
-
-    def execution_phase(self):
-
-        print()
-
-        print(LINE)
-        print("STEP 2 : PROGRAM EXECUTION")
-        print(LINE)
-
-        self.executor.execute()
-
-
-    def ui_phase(self):
-
-        history = self.executor.get_history()
-
-        self.ui.show_execution(history)
-
-        self.ui.summary(history)
-
-        self.ui.variable_timeline(history)
+    def storage_phase(self):
+        section("STEP 2 : SQLITE STORAGE SCHEMA")
+        print(f"Database ready: {DATABASE_PATH}")
+        print("Columns: timestamp, line_number, variable_name, serialized_value")
 
     def run(self):
-
         print(BANNER)
-
         self.ast_phase()
+        self.storage_phase()
 
-        self.execution_phase()
-
-        self.ui_phase()
-
+    def close(self):
+        self.database.close()
 
 
 def main():
-
+    parser = argparse.ArgumentParser(description="PyChronicle Week 1: find Python variable assignments with AST.")
+    parser.add_argument("target_file", nargs="?", default=TARGET_FILE,
+                        help="Python file to analyse (default: sample.py).")
+    app = None
     try:
-
-        app = PyChronicle()
-
+        app = PyChronicle(parser.parse_args().target_file)
         app.run()
-
     except KeyboardInterrupt:
-
-        print("\nProgram Interrupted.")
-
+        print("\nProgram interrupted.")
     except Exception:
-
-        print("\nApplication Error\n")
-
+        print("\nApplication error\n")
         traceback.print_exc()
-
+    finally:
+        if app:
+            app.close()
 
 
 if __name__ == "__main__":
-
     main()

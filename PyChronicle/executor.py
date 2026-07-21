@@ -1,20 +1,3 @@
-"""
-============================================================
-PyChronicle
-Program Executor
-
-Author : Devansh Patel
-
-Responsibilities
-----------------
-1. Load the target Python file
-2. Compile the source code
-3. Execute the program
-4. Start/Stop the tracer
-5. Handle runtime exceptions
-============================================================
-"""
-
 import os
 import traceback
 
