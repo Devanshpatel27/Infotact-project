@@ -1,5 +1,15 @@
-import sqlite3
+from config import DATABASE_PATH
+from database import DatabaseManager
 
-with sqlite3.connect("trace.db") as connection:
-    for row in connection.execute("SELECT * FROM variable_history"):
-        print(row)
+
+def main() -> None:
+    database = DatabaseManager(DATABASE_PATH)
+    try:
+        for frame in database.read_frames().frames:
+            print(frame)
+    finally:
+        database.close()
+
+
+if __name__ == "__main__":
+    main()

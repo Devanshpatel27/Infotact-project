@@ -1,56 +1,41 @@
-import argparse
-import traceback
-
-from ast_parser import ASTParser
-from config import BANNER, DATABASE_PATH, LINE, TARGET_FILE
+from config import DATABASE_PATH, PROJECT_NAME, TARGET_FILE
 from database import DatabaseManager
+from executor import ExecutionExecutor
+from models import ExecutionFrame
+from ui import PyChronicleApp
 
 
-def section(title):
-    print(f"{LINE}\n{title}\n{LINE}")
+def print_frame(frame: ExecutionFrame, number: int) -> None:
+    """Display one captured execution frame in the terminal."""
+    print(f"Frame {number}")
+    print(f"Line {frame.line_number}")
+    print("Variables")
+    if not frame.variables:
+        print("None")
+    for variable in frame.variables:
+        print(f"{variable.name} = {variable.value}")
 
 
-class PyChronicle:
-    def __init__(self, target_file=TARGET_FILE):
-        self.parser = ASTParser(target_file)
-        self.database = DatabaseManager(DATABASE_PATH)
-
-    def ast_phase(self):
-        section("STEP 1 : AST ANALYSIS")
-        self.parser.load_file()
-        self.parser.parse_ast()
-        return self.parser.find_assignments()
-
-    def storage_phase(self):
-        section("STEP 2 : SQLITE STORAGE SCHEMA")
-        print(f"Database ready: {DATABASE_PATH}")
-        print("Columns: timestamp, line_number, variable_name, serialized_value")
-
-    def run(self):
-        print(BANNER)
-        self.ast_phase()
-        self.storage_phase()
-
-    def close(self):
-        self.database.close()
-
-
-def main():
-    parser = argparse.ArgumentParser(description="PyChronicle Week 1: find Python variable assignments with AST.")
-    parser.add_argument("target_file", nargs="?", default=TARGET_FILE,
-                        help="Python file to analyse (default: sample.py).")
-    app = None
+def main() -> None:
+    """Parse, execute, trace, persist, validate, and initialize the Week 2 UI."""
+    print(f"{PROJECT_NAME} Started")
+    database = DatabaseManager(DATABASE_PATH)
+    executor = ExecutionExecutor(TARGET_FILE, database, print_frame)
     try:
-        app = PyChronicle(parser.parse_args().target_file)
-        app.run()
+        executor.parse()
+        print("AST Parsing Completed")
+        print("Execution Started")
+        history = executor.execute()
+        PyChronicleApp(TARGET_FILE.read_text(encoding="utf-8"), history)
+        print("Execution Finished")
+        print("History Saved")
+        print("Database Updated")
     except KeyboardInterrupt:
         print("\nProgram interrupted.")
-    except Exception:
-        print("\nApplication error\n")
-        traceback.print_exc()
+    except Exception as error:
+        print(f"Execution Error: {error}")
     finally:
-        if app:
-            app.close()
+        database.close()
 
 
 if __name__ == "__main__":

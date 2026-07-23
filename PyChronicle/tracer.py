@@ -1,96 +1,57 @@
-import os
 import sys
-import time
+from datetime import datetime
+from pathlib import Path
+from types import FrameType
+from typing import Callable
 
-from config import (
-    DEBUG, IGNORE_VARIABLES, MAX_HISTORY, TRACE_CALL, TRACE_EXCEPTION,
-    TRACE_LINE, TRACE_RETURN,
-)
+from config import IGNORED_VARIABLES, TRACE_BATCH_SIZE
 from database import DatabaseManager
+from models import ExecutionFrame, ExecutionHistory, VariableState
+
+FrameCallback = Callable[[ExecutionFrame, int], None]
 
 
 class ExecutionTracer:
-    def __init__(self):
-        self.database = DatabaseManager()
-        self.execution_history = []
-        self.start_time = None
-        self.frame_count = 0
+    """Capture every line event from one target Python file."""
+
+    def __init__(self, database: DatabaseManager, target_file: str | Path, on_frame: FrameCallback | None = None) -> None:
+        self.database = database
+        self.target_file = Path(target_file).resolve()
+        self.on_frame = on_frame
+        self.history = ExecutionHistory()
+        self._buffer: list[ExecutionFrame] = []
         self.enabled = False
 
-    def start(self):
-        self.execution_history.clear()
-        self.frame_count = 0
-        self.start_time = time.time()
+    def start(self) -> None:
+        self.history.clear()
+        self._buffer.clear()
         self.enabled = True
         sys.settrace(self.trace)
 
-    def stop(self):
+    def stop(self) -> ExecutionHistory:
         sys.settrace(None)
         self.enabled = False
-        self.database.close()
+        self.flush()
+        return self.history
 
-    def trace(self, frame, event, arg):
-        if not self.enabled:
-            return
-
-        filename = os.path.basename(frame.f_code.co_filename)
-        ignored_event = (
-            (event == "line" and not TRACE_LINE)
-            or (event == "call" and not TRACE_CALL)
-            or (event == "return" and not TRACE_RETURN)
-            or (event == "exception" and not TRACE_EXCEPTION)
-        )
-        if filename != "sample.py" or ignored_event:
-            return self.trace
-
-        self.frame_count += 1
-        line_number = frame.f_lineno
-        function_name = frame.f_code.co_name
-        variables = {
-            key: repr(value) for key, value in frame.f_locals.items()
-            if key not in IGNORE_VARIABLES
-        }
-        record = {
-            "event": event,
-            "line": line_number,
-            "function": function_name,
-            "variables": variables,
-        }
-        if len(self.execution_history) < MAX_HISTORY:
-            self.execution_history.append(record)
-
-        self.database.save_execution(filename, function_name, line_number, variables)
-        if DEBUG:
-            self._print_event(event, line_number, function_name, variables)
+    def trace(self, frame: FrameType, event: str, argument: object):
+        if event == "line" and self.enabled and self._is_target(frame):
+            self._record(frame)
         return self.trace
 
-    @staticmethod
-    def _print_event(event, line_number, function_name, variables):
-        print("=" * 60)
-        print(f"Event      : {event}")
-        print(f"Line       : {line_number}")
-        print(f"Function   : {function_name}")
-        if not variables:
-            print("Variables  : None")
-            return
-        print("Variables")
-        for key, value in variables.items():
-            print(f"   {key} = {value}")
+    def flush(self) -> None:
+        self.database.insert_frames(self._buffer)
+        self._buffer.clear()
 
-    def get_history(self):
-        return self.execution_history
+    def _is_target(self, frame: FrameType) -> bool:
+        return Path(frame.f_code.co_filename).resolve() == self.target_file
 
-    def clear(self):
-        self.execution_history.clear()
-        self.frame_count = 0
-
-    def summary(self):
-        elapsed = time.time() - self.start_time
-        print("\n")
-        print("=" * 60)
-        print("Execution Summary")
-        print("=" * 60)
-        print(f"Frames Recorded : {self.frame_count}")
-        print(f"Execution Time  : {elapsed:.4f} sec")
-        print(f"History Objects : {len(self.execution_history)}")
-        print("=" * 60)
+    def _record(self, frame: FrameType) -> None:
+        variables = [VariableState(name, repr(value)) for name, value in frame.f_locals.items() if name not in IGNORED_VARIABLES]
+        record = ExecutionFrame(datetime.now(), frame.f_code.co_filename, frame.f_code.co_name, frame.f_lineno, variables)
+        self.history.add(record)
+        self._buffer.append(record)
+        if self.on_frame:
+            self.on_frame(record, len(self.history))
+        if len(self._buffer) >= TRACE_BATCH_SIZE:
+            self.flush()

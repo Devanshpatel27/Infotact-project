@@ -1,11 +1,13 @@
+from pathlib import Path
+
+PROJECT_NAME = "PyChronicle"
+VERSION = "0.2.0"
+WINDOW_TITLE = f"{PROJECT_NAME} - Time Travel Debugger"
 BANNER = "PyChronicle - Python Execution History"
 LINE = "=" * 60
-DATABASE_PATH = "history.db"
-TARGET_FILE = "sample.py"
-IGNORE_VARIABLES = {"__builtins__"}
-TRACE_LINE = True
-TRACE_CALL = True
-TRACE_RETURN = True
-TRACE_EXCEPTION = True
-MAX_HISTORY = 1_000
-DEBUG = False
+BASE_DIR = Path(__file__).resolve().parent
+DATABASE_PATH = BASE_DIR / "history.db"
+DATABASE_NAME = "history.db"
+TARGET_FILE = BASE_DIR / "sample.py"
+TRACE_BATCH_SIZE = 250
+IGNORED_VARIABLES = {"__builtins__", "__file__", "__name__"}
